@@ -1,0 +1,9 @@
+{
+    "playerBackground":["#14142B",1],
+    "playerLine":["#24263A",1],
+    "playerLineBorder":["#4c8cc0",1],
+    "playerBtn":["#d876a9",1],
+    "playerProgressBar":["#804595",1],
+    "playerContentView":["#24263A",1],
+    "playerCardTreack":["#365475",1]
+}

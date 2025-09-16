@@ -10,6 +10,7 @@ from ui.PlayerScreen import Player
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+
 class MyApp(MDApp):
 
     def build(self):

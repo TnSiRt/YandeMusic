@@ -1,77 +1,49 @@
-from kivy.lang import Builder
 from kivy.properties import StringProperty
-from kivy.uix.screenmanager import Screen
+from kivy.lang import Builder
 
 from kivymd.icon_definitions import md_icons
+from kivymd.material_resources import dp
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.button import MDIconButton
+from kivymd.uix.recycleboxlayout import MDRecycleBoxLayout
+from kivymd.uix.recycleview import MDRecycleView
+from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
-from kivymd.uix.list import OneLineIconListItem
+from kivymd.uix.list import MDListItem
+from kivymd.uix.textfield import MDTextField, MDTextFieldHintText
 
 
-Builder.load_string(
-    '''
-#:import images_path kivymd.images_path
+Builder.load_string('''
+<IconItem>
 
-
-<CustomOneLineIconListItem>
-
-    IconLeftWidget:
+    MDListItemLeadingIcon:
         icon: root.icon
 
-
-<PreviousMDIcons>
-
-    MDBoxLayout:
-        orientation: 'vertical'
-        spacing: dp(10)
-        padding: dp(20)
-
-        MDBoxLayout:
-            adaptive_height: True
-
-            MDIconButton:
-                icon: 'magnify'
-
-            MDTextField:
-                id: search_field
-                hint_text: 'Search icon'
-                on_text: root.set_list_md_icons(self.text, True)
-
-        RecycleView:
-            id: rv
-            key_viewclass: 'viewclass'
-            key_size: 'height'
-
-            RecycleBoxLayout:
-                padding: dp(10)
-                default_size: None, dp(48)
-                default_size_hint: 1, None
-                size_hint_y: None
-                height: self.minimum_height
-                orientation: 'vertical'
-'''
-)
+    MDListItemSupportingText:
+        text: root.text
+''')
 
 
-class CustomOneLineIconListItem(OneLineIconListItem):
+class IconItem(MDListItem):
     icon = StringProperty()
+    text = StringProperty()
 
 
-class PreviousMDIcons(Screen):
-
+class PreviousMDIcons(MDScreen):
     def set_list_md_icons(self, text="", search=False):
         '''Builds a list of icons for the screen MDIcons.'''
 
         def add_icon_item(name_icon):
-            self.ids.rv.data.append(
+            self.get_ids().rv.data.append(
                 {
-                    "viewclass": "CustomOneLineIconListItem",
+                    "viewclass": "IconItem",
                     "icon": name_icon,
                     "text": name_icon,
                     "callback": lambda x: x,
                 }
             )
 
-        self.ids.rv.data = []
+        self.get_ids().rv.data = []
         for name_icon in md_icons.keys():
             if search:
                 if text in name_icon:
@@ -83,9 +55,49 @@ class PreviousMDIcons(Screen):
 class MainApp(MDApp):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.screen = PreviousMDIcons()
+        self.screen = PreviousMDIcons(
+            MDBoxLayout(
+                MDBoxLayout(
+                    MDIconButton(
+                        icon='magnify',
+                        pos_hint={'center_y': 0.5},
+                    ),
+                    MDTextField(
+                        MDTextFieldHintText(
+                            text='Search icon',
+                        ),
+                        id="search_field",
+                    ),
+                    adaptive_height=True,
+                ),
+                MDRecycleView(
+                    MDRecycleBoxLayout(
+                        padding=(dp(10), dp(10), 0, dp(10)),
+                        default_size=(None, dp(48)),
+                        default_size_hint=(1, None),
+                        size_hint_y=None,
+                        adaptive_height=True,
+                        orientation='vertical',
+                    ),
+                    id="rv",
+                ),
+                orientation='vertical',
+                spacing=dp(10),
+                padding=dp(20),
+            ),
+            md_bg_color=self.theme_cls.backgroundColor,
+        )
 
     def build(self):
+        rv = self.screen.get_ids().rv
+        rv.key_viewclass = 'viewclass'
+        rv.key_size = 'height'
+        search_field = self.screen.get_ids().search_field
+        search_field.bind(
+            text=lambda instance, value: self.screen.set_list_md_icons(
+                value, True
+            )
+        )
         return self.screen
 
     def on_start(self):
