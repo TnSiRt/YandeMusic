@@ -1,4 +1,4 @@
-# 🎵 Yandex Music API Client
+# 🎵 Yande Music Client
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![Requests](https://img.shields.io/badge/Requests-2.32+-green.svg)](https://requests.readthedocs.io)
