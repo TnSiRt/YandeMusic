@@ -17,8 +17,8 @@
 ## 🚀 Установка
 
 ```bash
-git clone https://github.com/yourusername/yandex-music-api.git
-cd yandex-music-api
+git clone https://github.com/TnSiRt/YandeMusic.git
+cd YandeMusic
 pip install -r requirements.txt
 ```
 
