@@ -1,5 +1,5 @@
 {
-    "base_headres":{
+    "base_headres_0":{
         "accept":"application/json, text/javascript, */*; q=0.01",
         "accept-encoding":"gzip, deflate, br, zstd",
         "accept-language":"ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
@@ -11,6 +11,15 @@
         "te":"trailers",
         "tractor-location":"0"
     },
+    "base_headres_1":{
+        "accept":"application/json, text/javascript, */*; q=0.01",
+        "accept-encoding":"gzip, deflate, br, zstd",
+        "accept-language":"ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+        "sec-fetch-dest":"empty",
+        "sec-fetch-mode":"cors",
+        "sec-fetch-site":"same-site",
+        "user-agent":"Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0"
+    },
     "passport_0":{
         "host":"passport.yandex.ru",
         "origin":"https://passport.yandex.ru",
@@ -19,6 +28,11 @@
     },
     "passport_1":{
         "host":"passport.yandex.ru",
+        "origin":"https://passport.yandex.ru",
+        "referer":"https://passport.yandex.ru/"
+    },
+    "api_passport_0":{
+        "host":"api.passport.yandex.ru",
         "origin":"https://passport.yandex.ru",
         "referer":"https://passport.yandex.ru/"
     }
