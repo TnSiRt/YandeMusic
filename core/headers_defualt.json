@@ -1,0 +1,25 @@
+{
+    "base_headres":{
+        "accept":"application/json, text/javascript, */*; q=0.01",
+        "accept-encoding":"gzip, deflate, br, zstd",
+        "accept-language":"ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+        "user-agent":"Mozilla/5.0 (X11; Linux x86_64; rv:142.0) Gecko/20100101 Firefox/142.0",
+        "x-requested-with":"XMLHttpRequest",
+        "sec-fetch-dest":"empty",
+        "sec-fetch-mode":"cors",
+        "sec-fetch-site":"same-origin",
+        "te":"trailers",
+        "tractor-location":"0"
+    },
+    "passport_0":{
+        "host":"passport.yandex.ru",
+        "origin":"https://passport.yandex.ru",
+        "priority":"u=0",
+        "referer":"https://passport.yandex.ru/"
+    },
+    "passport_1":{
+        "host":"passport.yandex.ru",
+        "origin":"https://passport.yandex.ru",
+        "referer":"https://passport.yandex.ru/"
+    }
+}
