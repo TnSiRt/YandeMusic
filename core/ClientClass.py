@@ -3,9 +3,12 @@ import os
 
 import requests
 import json
+import time
 
 from bs4 import BeautifulSoup # для поиска по html
 import logging
+
+from yandex_music import Client
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -16,15 +19,37 @@ logging.basicConfig(
 
 config_path = os.path.join(os.path.dirname(__file__), 'headers_default.json')
 token_path = os.path.join(os.path.dirname(__file__), 'tokens.json')
+cash_path = os.path.join(os.path.dirname(__file__), 'cash.json')
 
 class Requests:
     def __init__(self, cookies_file='cookies.json'):
         self.session = requests.Session()
         self.cookies_file = cookies_file
-        self.csrf = None
-        self.uuid = None
-        self.uid = None
         self.ncrnd = 66666
+        try:
+            self.Ctoken = self.get_token('Ctoken')
+        except Exception:
+            self.Ctoken = None
+        try:
+            self.csrf = self.get_token('csrf')
+        except Exception:
+            self.csrf = None
+        try:
+            self.uuid = self.get_token('uuid')
+        except Exception:
+            self.uuid = None
+        try:
+            self.uid = self.get_token('uid')
+        except Exception:
+            self.uid = None
+
+
+        if self.Ctoken != None:
+            self.client = Client(self.Ctoken)
+            self.client.init()
+        else:
+            self.client = None
+
         with open(config_path, 'r') as head:
             self.headers = json.load(head)
 
@@ -108,23 +133,18 @@ class Requests:
     def convert(self,**kwargs):
         """Конвертирует именованные параметры в dict"""
         return kwargs
-    
-    def get_user_id(self):
-        """Получаем ID текущего пользователя"""
-        response = self.getCustom("https://api.music.yandex.net/account/status")
-        if response.status_code == 200:
-            data = response.json()
-            return data['result']['account']['uid'], data
-        return None
 
-    def get_liked_tracks(self, user_id):
-        """Получаем список любимых треков"""
-        url = f"https://api.music.yandex.net/users/{user_id}/likes/tracks"
-        response = self.getCustom(url)
-        
-        if response.status_code == 200:
-            return response.json()
-        return None
+    def get_tokenC(self):
+        response = api.getCustom(
+            "https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d"
+        )
+        soup = BeautifulSoup(response.text, 'lxml')
+        AuthToken = soup.find('meta', {'http-equiv': 'refresh'})
+        content = AuthToken.get("content")
+        match = re.search(r'access_token=([a-zA-Z0-9-_]+)', content)
+        if match:
+            token = match.group(1)
+            self.add_token('Ctoken',token)
 
     def add_token(self, name, value):
         with open(token_path, 'r') as file:
@@ -166,18 +186,6 @@ class Requests:
         )
         data = response.json()
         self.add_token('csrf',data['csrf'])
-
-    def getLikePlayListUuid(self):
-        self.update_cookie()
-        uuid_playlist=self.getCustom('https://api.music.yandex.ru/landing-blocks/collection/playlist-with-likes')
-        uuid = uuid_playlist.json()['result']['playlist']['playlistUuid']
-        self.add_token('uuid_playlist',uuid)
-
-    def getLikeListSond(self):
-        self.update_cookie()
-        response = self.getCustom(f"https://api.music.yandex.ru/playlist/{self.get_token('uuid_playlist')}?resumeStream=false&richTracks=false")
-        data = response.json() 
-        print(data['result']['title'])
 
     def login(self):
         """функция для входа в аккаунт, потребует потом смс код"""
@@ -327,9 +335,64 @@ class Requests:
         )
         self.add_token('csrf',response.json()['csrf'])
 
+        self.update_cookie()
+        self.get_tokenC()
+        self.client = Client(self.get_token('Ctoken'))
+        self.client.init()
+
+    def get_cash(self):
+        with open(cash_path,'r') as file:
+            data = json.load(file)
+        return data
+    
+    def set_cash(self,data):
+        with open(cash_path,'w') as file:
+            file.write(
+                json.dumps(
+                    data,
+                    indent=4,
+                    ensure_ascii=False
+                )
+            )
+
+
+    def get_treack_by_id(self,id=None):
+        data = self.get_cash()
+        try:
+            if id == None:
+                return data
+            else:
+                return data[id]
+        except KeyError:
+            return None
+
+    def getLikeSound(self):
+        print('load cash')
+        data = self.client.users_likes_tracks()
+        cash = {}
+        for i in data:
+            if self.get_treack_by_id(i['id']) == None:
+                info = i.fetch_track()
+                cash[i['id']] = {
+                    'title':info['title'],
+                    'artist':info['artists'][0]['name'],
+                    "duration":info['duration_ms'],
+                    "image":info['cover_uri'],
+                    "albomId":info['albums'][0]['id']
+                }
+        if self.get_cash() != cash:
+            self.set_cash(cash)
+        print('end load cash')
+
+    def getTreackByid(self, id):
+        data = self.get_treack_by_id(id)
+        treack_id = id+":"+str(data['albomId'])
+        data = self.client.tracks([treack_id])
+        print(data)
+
 if __name__ == "__main__":
     api = Requests()
-    api.getLikeListSond()
-    
+    api.getTreackByid('131944314')
+   
 
 
