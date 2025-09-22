@@ -20,9 +20,11 @@ logging.basicConfig(
 config_path = os.path.join(os.path.dirname(__file__), 'headers_default.json')
 token_path = os.path.join(os.path.dirname(__file__), 'tokens.json')
 cash_path = os.path.join(os.path.dirname(__file__), 'cash.json')
+cashFile_path = os.path.join(os.path.dirname(__file__), "cashFile")
+cookie_path = os.path.join(os.path.dirname(__file__), "cookies.json")
 
 class Requests:
-    def __init__(self, cookies_file='cookies.json'):
+    def __init__(self, cookies_file=cookie_path):
         self.session = requests.Session()
         self.cookies_file = cookies_file
         self.ncrnd = 66666
@@ -355,8 +357,7 @@ class Requests:
                 )
             )
 
-
-    def get_treack_by_id(self,id=None):
+    def get_treack_by_id(self, id=None):
         data = self.get_cash()
         try:
             if id == None:
@@ -366,33 +367,48 @@ class Requests:
         except KeyError:
             return None
 
+    def getInfoFormTreack(self, item):
+        info = item.fetch_track()
+        return {
+            'id':item['id'],
+            'title':info['title'],
+            'artist':info['artists'][0]['name'],
+            "duration":info['duration_ms'],
+            "image":info['cover_uri'],
+            "albomId":info['albums'][0]['id'],
+            "fileDownload":None
+        }
+
     def getLikeSound(self):
         print('load cash')
         data = self.client.users_likes_tracks()
+        count = 0
         cash = {}
         for i in data:
-            if self.get_treack_by_id(i['id']) == None:
-                info = i.fetch_track()
-                cash[i['id']] = {
-                    'title':info['title'],
-                    'artist':info['artists'][0]['name'],
-                    "duration":info['duration_ms'],
-                    "image":info['cover_uri'],
-                    "albomId":info['albums'][0]['id']
-                }
+            treack = self.get_treack_by_id(count)
+            if treack != None:
+                if treack['id'] == i['id']:
+                    pass
+                else:
+                    cash[count] = self.getInfoFormTreack(i)
+            else:
+                cash[count] = self.getInfoFormTreack(i)
+            count += 1
         if self.get_cash() != cash:
             self.set_cash(cash)
         print('end load cash')
 
-    def getTreackByid(self, id):
-        data = self.get_treack_by_id(id)
-        treack_id = id+":"+str(data['albomId'])
-        data = self.client.tracks([treack_id])
-        print(data)
-
-if __name__ == "__main__":
-    api = Requests()
-    api.getTreackByid('131944314')
+    def downloadFileChoisse(self,number:str):
+        data = self.client.users_likes_tracks()
+        treack_data = self.get_treack_by_id(number)
+        treack_id = treack_data['id']
+        name_file = f'{cashFile_path}/{treack_data['title'].replace(' ', '_')}_{treack_data['artist'].replace(' ', '_')}.mp3'
+        for i in data:
+            if i['id'] == treack_id:
+                i.fetch_track().download(name_file)
+        data = self.get_treack_by_id()
+        data[number]['fileDownload'] = name_file
+        self.set_cash(data)
    
 
 
