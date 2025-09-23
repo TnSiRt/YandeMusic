@@ -261,16 +261,17 @@ class ControlUI(MDGridLayout):
         if data['file'] is None:
             # запускаем анимацию загрузки
             self._anim_event = Clock.schedule_interval(self._animTextForDownload, 0.5)
+            self.resetUpdate()
             self.stopOrStartEvent()
             # качаем в фоне
             self.app.audioDriver.pause()
             self.app.executor.submit(self._downloadFileWithInfoOfScreen, i)
         else:
+            self.resetUpdate()
             self.titleAndArtist.text = f"{data['title']} - {data['artist']}"
             self.app.audioDriver.load(f"{data['title'].replace(' ', '_')}_{data['artist'].replace(' ', '_')}.mp3")
             self.app.audioDriver.unpauseOrPlay()
             self.btnLayout.playPause(change=True)
-            self.resetUpdate()
 
         self.app.reloadCash()
 

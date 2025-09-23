@@ -66,15 +66,21 @@ class BtnSoundControlHorizantal(MDGridLayout):
 
 
     def playPause(self, change:bool=False, *args):
-        if change == False:
-            if self.pauseUnpauseBtn.icon == 'play-circle-outline':  
-                self.pauseUnpauseBtn.icon = 'pause-circle-outline'
-                self.app.audioDriver.unpauseOrPlay()
-                self.app.playerScreen.children[0].children[0].stopOrStartEvent()
-            else:
-                self.pauseUnpauseBtn.icon = 'play-circle-outline'
-                self.app.audioDriver.pause()
-                self.app.playerScreen.children[0].children[0].stopOrStartEvent()
-        elif change == True:
-            if self.pauseUnpauseBtn.icon == 'play-circle-outline':  
-                self.pauseUnpauseBtn.icon = 'pause-circle-outline'
+        try:
+            if change == False:
+                if self.pauseUnpauseBtn.icon == 'play-circle-outline':  
+                    self.pauseUnpauseBtn.icon = 'pause-circle-outline'
+                    self.app.audioDriver.unpauseOrPlay()
+                    self.app.playerScreen.children[0].children[0].stopOrStartEvent()
+                else:
+                    self.pauseUnpauseBtn.icon = 'play-circle-outline'
+                    self.app.audioDriver.pause()
+                    self.app.playerScreen.children[0].children[0].stopOrStartEvent()
+            elif change == True:
+                if self.pauseUnpauseBtn.icon == 'play-circle-outline':  
+                    self.pauseUnpauseBtn.icon = 'pause-circle-outline'
+        except Exception:
+            index = self.app.playListManager.index
+            data = self.app.playListManager.getAllInfoByCurrentIndex()
+            self.app.playerScreen.children[0].children[0].setData(data, index)
+            self.playPause()

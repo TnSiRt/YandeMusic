@@ -23,7 +23,10 @@ class PlayListManager():
 
     def next(self):
         self.index += 1
-        self.app.audioDriver.set_pos(0.0)
+        try:
+            self.app.audioDriver.set_pos(0.0)
+        except Exception:
+            pass
         return {
             "title":self.getTitleByCurrentIndex(),
             "artist":self.getArtistByCurrentIndex(),

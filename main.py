@@ -15,6 +15,8 @@ from core.playlistManager import PlayListManager
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+if not os.path.exists(BASE_DIR/'core/cash.json'):
+    os.system('touch cash.json')
 
 class MyApp(MDApp):
 

@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup # для поиска по html
 import logging
 
 from yandex_music import Client
+from kivymd.app import MDApp
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -31,6 +32,7 @@ class Requests:
         self.ncrnd = 66666
         self.isCookie = None
         self.track_id = None
+        self.app = MDApp.get_running_app()
         try:
             self.Ctoken = self.get_token('Ctoken')
         except Exception:
@@ -403,6 +405,7 @@ class Requests:
         if self.get_cash() != cash:
             self.set_cash(cash)
         print('end load cash')
+        self.app.reloadCash()
 
     def downloadFileChoisse(self,number:str):
         data = self.client.users_likes_tracks()
