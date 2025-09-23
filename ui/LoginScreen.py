@@ -1,9 +1,12 @@
 import json
 from kivy.clock import Clock
+import asyncio
 from kivy.animation import Animation
 from kivy.graphics import Color, RoundedRectangle, Line
 
 from ui.convetor import hex_to_rgba
+
+from kivymd.app import MDApp
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.fitimage import FitImage
@@ -12,20 +15,25 @@ from kivymd.uix.textfield import MDTextField, MDTextFieldLeadingIcon, MDTextFiel
 from kivymd.uix.button import MDButton, MDButtonText
 
 from kivymd.uix.label import MDLabel
-from kivymd.uix.card import MDCard
+from kivymd.uix.progressindicator import MDLinearProgressIndicator
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.gridlayout import MDGridLayout
 from kivymd.uix.floatlayout import MDFloatLayout
+
+from core.ClientClass import Requests
 
 
 with open("config.json",'r') as f:
     color_schem = json.load(f)
 
 class Login(MDScreen):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, api, changeFunc, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.name='login'
+        self.api = api
+        self.changeFunc = changeFunc
+        self.app = MDApp.get_running_app()
 
         self.startCountWallper = 0
         self.listBackgroundImage = [
@@ -72,6 +80,16 @@ class Login(MDScreen):
             }
         )
         self.content_box.add_widget(self.phoneInput)
+        
+        self.progress = MDLinearProgressIndicator(
+            value=0,
+            max=100,
+            pos_hint={"center_x": 0.5, "center_y": 0.5},
+            size_hint=(0.8, None),
+            height="10dp",
+        )
+        self.progress.opacity = 0  # пока скрыт
+        self.content_box.add_widget(self.progress)
         self.boxForm.add_widget(self.content_box)
 
         self.layoutLoginButton = MDFloatLayout()
@@ -94,7 +112,7 @@ class Login(MDScreen):
         self.startCountWallper += 1
         self.updateWallper = Clock.schedule_interval(self.updateImageBackground, 10)
 
-        self.btn.on_release = self.sendCode
+        self.btn.on_release = self.sendCodeToMobile
 
         self.boxLabel = MDBoxLayout(
             pos_hint={"x": 0.53, "y": 0.01},
@@ -120,25 +138,67 @@ class Login(MDScreen):
         )
 
         self.appName = MDLabel(text='YandeMusic', font_style='Headline', bold=True, role='medium', halign='right')
-        self.description = MDLabel(text='Не одобряю пиратство, все что выделаете с клиентом, вы делаете на свой страх и риск!',font_style='Title', role='large', halign='right')
+        self.description = MDLabel(text='Не одобряю пиратство, все что вы делаете с клиентом, вы делаете на свой страх и риск!',font_style='Title', role='large', halign='right')
         self.boxLabel.add_widget(self.appName)
         self.boxLabel.add_widget(self.description)
         self.add_widget(self.boxLabel)
 
 
-    def sendCode(self):
+    def sendCodeToMobile(self):
         phone = self.phoneInput.text
         self.phoneInput.text = ''
-        print(phone)
+        self.app.executor.submit(self._login_request_start, phone)
 
-        self.text.text= 'Отправить код'
-        self.iconLead.icon = 'invoice-send'
-        self.hintText.text = 'Введите код из сообщения'
+    def sendCodeToService(self):
+        code = self.phoneInput.text
+        self.phoneInput.text = ''
+        # спрятать поле ввода
+        anim = Animation(opacity=0, duration=0.3)
+        anim.start(self.phoneInput)
+        
+        # показать прогрессбар
+        self.progress.opacity = 1
+        self.progress.value = 0
+
+        # запускаем "анимацию заполнения"
+        self._animate_progress()
+        self.app.executor.submit(self._login_request_end, code)
+
+    def _animate_progress(self):
+        def increment(dt):
+            if self.progress.value < 100:
+                self.progress.value += 1
+            else:
+                self.progress.value = 0
+        Clock.schedule_interval(increment, 0.005)
 
     def updateImageBackground(self, *args):
         anim = Animation(opacity=0, duration=1)  # 1 секунда на исчезновение
         anim.bind(on_complete=self._set_new_background)
         anim.start(self.backgroundImage)
+
+    def _login_request_start(self, phone):
+        self.api.start_login(phone)
+        # после выполнения нужно вернуться в UI-поток
+        Clock.schedule_once(lambda dt: self._after_login_request_start(), 0)
+    
+    def _after_login_request_start(self):
+        self.text.text = 'Отправить код'
+        self.iconLead.icon = 'invoice-send'
+        self.hintText.text = 'Введите код из сообщения'
+        self.btn.on_release = self.sendCodeToService
+
+    def _login_request_end(self,code):
+        self.api.end_login(code)
+        self.api.get_tokenC()
+        # скрываем прогресс
+        anim = Animation(opacity=0, duration=0.3)
+        anim.start(self.progress)
+        Clock.schedule_once(lambda dt: self._after_login_request_end(), 0)
+    
+    def _after_login_request_end(self):
+        self.updateWallper.cancel()
+        self.changeFunc('Player')
 
     def _set_new_background(self, *args):
         # подменяем картинку
@@ -154,7 +214,6 @@ class Login(MDScreen):
         # включаем плавное появление
         Animation(opacity=1, duration=1).start(self.backgroundImage)
     
-
     def _update_rect(self, *args):
         self.rect.pos = self.boxForm.pos
         self.rect.size = self.boxForm.size

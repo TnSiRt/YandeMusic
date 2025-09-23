@@ -25,9 +25,12 @@ cookie_path = os.path.join(os.path.dirname(__file__), "cookies.json")
 
 class Requests:
     def __init__(self, cookies_file=cookie_path):
+        """Класс для работы с запросами к yandex, получение cookie и токена, а потом уже работа с треками"""
         self.session = requests.Session()
         self.cookies_file = cookies_file
         self.ncrnd = 66666
+        self.isCookie = None
+        self.track_id = None
         try:
             self.Ctoken = self.get_token('Ctoken')
         except Exception:
@@ -82,8 +85,10 @@ class Requests:
                     except Exception as e:
                         logging.debug('Не удалось подгрузить токен')
                         print("[!]  Куки загружены из файла")
+                    self.isCookie = True
             except:
                 print("Не удалось загрузить куки")
+                self.isCookie = False
 
     def _save_cookies(self):
         """Сохраняем куки в файл"""
@@ -91,6 +96,7 @@ class Requests:
             with open(self.cookies_file, 'w') as f:
                 json.dump(requests.utils.dict_from_cookiejar(self.session.cookies), f)
             print("Куки сохранены в файл")
+            self.isCookie = True
         except Exception as e:
             print(f"Ошибка сохранения куки: {e}")
 
@@ -111,7 +117,6 @@ class Requests:
     def postCustom(self, url, data=None, headers_key="base_headres_0", **kwargs):
         kwargs['data'] = data
         return self.request('POST', url, headers_key, **kwargs)
-
     
     def search_in_html(self, html):
         """Посик csrf и uuid на странице полученный от get запрса"""
@@ -137,7 +142,7 @@ class Requests:
         return kwargs
 
     def get_tokenC(self):
-        response = api.getCustom(
+        response = self.getCustom(
             "https://oauth.yandex.ru/authorize?response_type=token&client_id=23cabbbdc6cd418abb4b39c32c41195d"
         )
         soup = BeautifulSoup(response.text, 'lxml')
@@ -189,21 +194,21 @@ class Requests:
         data = response.json()
         self.add_token('csrf',data['csrf'])
 
-    def login(self):
-        """функция для входа в аккаунт, потребует потом смс код"""
-        number = input("номер >> ")
+    def start_login(self, phone):
+        """функция для отправки кода входа, потом нужно вызвать другую функцию чтобы завершить"""
+        number = phone
         response = self.getCustom(self.urlLoginPage)
-        csrf, uuid, retpath = self.search_in_html(response.text)
-        self.add_token('csrf',csrf)
-        self.add_token('uuid', uuid)
+        self.csrf, self.uuid, self.retpath = self.search_in_html(response.text)
+        self.add_token('csrf',self.csrf)
+        self.add_token('uuid', self.uuid)
 
         response = self.postCustom(
             self.urlStartLoginRequest,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 login=number,
-                process_uuid=uuid,
-                retpath=retpath,
+                process_uuid=self.uuid,
+                retpath=self.retpath,
                 origin="music",
                 check_for_xtokens_for_pictures="1",
                 can_send_push_code="1",
@@ -213,13 +218,13 @@ class Requests:
             ),
             headers=self.headers['passport_0'],
         )
-        track_id = response.json()['track_id']
+        self.track_id = response.json()['track_id']
         
         response = self.postCustom(
             self.urlSendPush,
             data=self.convert(
-                csrf_token=csrf,
-                track_id=track_id,
+                csrf_token=self.csrf,
+                track_id=self.track_id,
                 phone_number=number,
                 force_show_code_in_notification="1",
                 can_use_anmon="true",
@@ -236,35 +241,36 @@ class Requests:
         response = self.postCustom(
             self.urlUserEntryFlowSubmit,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 process="ENTRY_REGISTER_NEOPHONISH",
                 origin="music",
                 isSimplifiedPhoneAuth="false",
-                process_uuid=uuid,
-                track_id=track_id
+                process_uuid=self.uuid,
+                track_id=self.track_id
             ),
             headers=self.headers['passport_0']
         )
         if response.json()['status'] == 'ok':
             print(f'проверьте ваш {platform}')
-        
-
-
-        self.postCustom(
+    
+    def end_login(self,code):
+        response = self.postCustom(
             self.urlAuthAccounts,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 origin="music"
             ),
             headers=self.headers['passport_0']
         )
+        self.csrf = response.json()['csrf']
+        logging.debug(response.json())
 
         self.postCustom(
             self.urlCheckPushCode,
             data=self.convert(	
-                csrf_token=csrf,
-                track_id=track_id,
-                code=input('push code >> ')
+                csrf_token=self.csrf,
+                track_id=self.track_id,
+                code=code
             ),
             headers=self.headers['passport_0']
         ) # send push to server
@@ -272,8 +278,8 @@ class Requests:
         response = self.postCustom(
             self.urlFindAccountsByPhoneV2,
             data=self.convert(
-                csrf_token=csrf,
-                track_id=track_id,
+                csrf_token=self.csrf,
+                track_id=self.track_id,
                 can_use_anmon="true"
             )
         )
@@ -285,11 +291,11 @@ class Requests:
         self.postCustom(
             self.urlNeoPhonishAuth,
             data=self.convert(
-                csrf_token=csrf,
-                track_id=track_id,
+                csrf_token=self.csrf,
+                track_id=self.track_id,
                 uid=uid,
                 useNewSuggestByPhone="true",
-                retpath=f"https://sso.passport.yandex.ru/prepare?uuid={uuid}&goal=https%3A%2F%2Fya.ru%2F&finish=https%3A%2F%2Fmusic.yandex.ru%2F",
+                retpath=f"https://sso.passport.yandex.ru/prepare?uuid={self.uuid}&goal=https%3A%2F%2Fya.ru%2F&finish=https%3A%2F%2Fmusic.yandex.ru%2F",
                 retpathWasEnhanced="false"
             ),
             headers=self.headers['passport_0']
@@ -298,7 +304,7 @@ class Requests:
         response = self.postCustom(
             self.urlAuthAccounts,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 origin='music'
             ),
             headers=self.headers['passport_1']
@@ -307,7 +313,7 @@ class Requests:
         self.postCustom(
             self.urlGetCommonTrack,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 origin="music",
                 track_id=""
             ),
@@ -316,9 +322,9 @@ class Requests:
         self.postCustom(
             self.urlAskV2,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 origin="music",
-                track_id=track_id
+                track_id=self.track_id
             ),
             headers=self.headers['passport_1']
         )
@@ -330,7 +336,7 @@ class Requests:
         response = self.postCustom(
             self.urlAuthAccounts,
             data=self.convert(
-                csrf_token=csrf,
+                csrf_token=self.csrf,
                 origin='music'
             ),
             headers=self.headers['passport_1']
@@ -410,5 +416,4 @@ class Requests:
         data[number]['fileDownload'] = name_file
         self.set_cash(data)
    
-
 
