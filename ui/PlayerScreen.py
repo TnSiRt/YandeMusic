@@ -260,6 +260,8 @@ class ControlUI(MDGridLayout):
 
         if data['file'] is None:
             # запускаем анимацию загрузки
+            if hasattr(self, "_anim_event"):
+                self._anim_event.cancel()
             self._anim_event = Clock.schedule_interval(self._animTextForDownload, 0.5)
             self.resetUpdate()
             self.stopOrStartEvent()
