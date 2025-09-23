@@ -15,18 +15,16 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.button import MDIconButton
 
-from kivymd.uix.list import MDList, MDListItem, MDListItemHeadlineText, MDListItemLeadingAvatar, MDListItemSupportingText
+from kivymd.uix.list import MDList, TwoLineAvatarListItem, ImageLeftWidget
 from kivymd.uix.scrollview import MDScrollView
 
-from kivymd.uix.slider import MDSlider, MDSliderHandle
-from kivymd.uix.divider import MDDivider
-from kivymd.uix.progressindicator import MDCircularProgressIndicator
+from kivymd.uix.slider import MDSlider
+from kivymd.uix.progressbar import MDProgressBar
 
 from kivymd.uix.screen import MDScreen
 from ui.convetor import hex_to_rgba, ms_to_time, s_to_time
 from ui.btn_layout import BtnSoundControlHorizantal
 
-from core.audioDriver import AudioDriver
 
 with open("config.json",'r') as f:
     color_schem = json.load(f)
@@ -60,24 +58,19 @@ class DataView(MDGridLayout):
         self.lblLike = MDLabel(
             text='Favorite',
             halign='center',
-            font_style='Headline',
-            role='large'
+            font_style='H6',
         )
         self.layoutLblF.add_widget(self.lblLike)
         self.likeSoundBox.add_widget(self.layoutLblF)
-
-        self.divider = MDDivider(divider_width=10)
-        self.likeSoundBox.add_widget(self.divider)
 
         # дальше нужно чуть пояснить, для тех кто будет рефакторить код
         # дальше будет создаваться два виджет без добавления, за отбражение будет отвечать специальная функция
 
         self.loadTreackIndicatorBox = MDFloatLayout() # добавить в likeSoundBox пока клиент ждет данные
-        self.indicatorWidget = MDCircularProgressIndicator(
-            determinate=True,
+        self.indicatorWidget = MDProgressBar(
             size_hint=(None, None),
             size=("48dp", "48dp"),
-            pos_hint={'center_x': .5, 'center_y': .5},
+            pos_hint={'center_x': .5, 'y': .1},
         )
         self.loadTreackIndicatorBox.add_widget(self.indicatorWidget)
 
@@ -103,22 +96,19 @@ class DataView(MDGridLayout):
         self.searchLineBox.add_widget(self.layoutF)
 
         self.layoutBtn = MDAnchorLayout(anchor_x='center', anchor_y='center', size_hint_x=0.1)
-        self.startSearchBtn = MDIconButton(icon='magnify', style='filled')
+        self.startSearchBtn = MDIconButton(icon='magnify')
         self.layoutBtn.add_widget(self.startSearchBtn)
         self.searchLineBox.add_widget(self.layoutBtn)
 
         self.searchSoundBox.add_widget(self.searchLineBox)
 
-        self.lineDivider = MDDivider(size_hint_y=0.05)
-        self.searchSoundBox.add_widget(self.lineDivider)
 
         self.boxResult = MDBoxLayout()
 
         self.viewListResult = MDLabel(
             text='Search ...',
             halign='center',
-            font_style='Headline',
-            role='large'
+            font_style='H6',
         )
         self.boxResult.add_widget(self.viewListResult)
 
@@ -149,20 +139,18 @@ class DataView(MDGridLayout):
         else:
            self.likeSoundBox.remove_widget(self.loadTreackIndicatorBox)
            for i in self.api.get_treack_by_id():
-               data = self.api.get_treack_by_id(str(i))
-               self.item = MDListItem(
-                    MDListItemLeadingAvatar(
-                        source=f'http://{data['image'].replace("%%","100x100")}',
-                    ),
-                    MDListItemHeadlineText(
-                        text=data['title'],
-                    ),
-                    MDListItemSupportingText(
-                        text=data['artist'],
-                    ),
-               )
-               self.item.on_release = lambda i=i: self.setTreack(i)
-               self.listView.add_widget(self.item)
+                data = self.api.get_treack_by_id(str(i))
+                self.item = TwoLineAvatarListItem(
+                    text=data['title'],
+                    secondary_text=data['artist'],
+                )
+                self.item.add_widget( 
+                    ImageLeftWidget(
+                        source=f'http://{data['image'].replace("%%","100x100")}'
+                    )
+                )
+                self.item.on_release = lambda i=i: self.setTreack(i)
+                self.listView.add_widget(self.item)
            self.likeSoundBox.add_widget(self.listViewTreack)
 
 class ControlUI(MDGridLayout):
@@ -197,11 +185,15 @@ class ControlUI(MDGridLayout):
 
         self.currentTime = MDLabel(text='00:00', size_hint_x=0.2, halign='center')
         self.progressTreack = MDSlider(
-            track_active_color=hex_to_rgba(color_schem['playerProgressBar']),
-            on_touch_move=self._setPosTreack
+            # оставь свои параметры, НИ В КОЕМ СЛУЧАЕ не ставьте on_touch_up=...
         )
-        self.progressTreack.add_widget(MDSliderHandle())
+        # привязываем обработчики
+        self.progressTreack.bind(on_touch_down=self._slider_touch_down,
+                                on_touch_up=self._slider_touch_up,
+                                on_touch_move=self._slider_touch_move)  # опционально
+
         self.totalTime = MDLabel(text='00:00', size_hint_x=0.2, halign='center') 
+
 
         self.controlBox.add_widget(self.currentTime)
         self.controlBox.add_widget(self.progressTreack)
@@ -216,14 +208,46 @@ class ControlUI(MDGridLayout):
             self.btnLayout
         )
 
-    def _set_new_background(self, *args):
-        # подменяем картинку
+    def _slider_touch_down(self, instance, touch):
+        if instance.collide_point(*touch.pos):
+            self._slider_touch = touch
+            self._slider_was_moved = False
+            try:
+                touch.grab(instance)
+            except Exception:
+                pass
+
+
+
+    def _slider_touch_move(self, instance, touch):
+        if getattr(self, "_slider_touch", None) is touch:
+            self._slider_was_moved = True
+
+    def _slider_touch_up(self, instance, touch):
+        if getattr(self, "_slider_touch", None) is touch:
+            try:
+                if touch.grab_current is instance:
+                    touch.ungrab(instance)
+            except Exception:
+                pass
+            if instance.collide_point(*touch.pos):
+                self.on_slider_release(instance, touch)
+
+        self._slider_touch = None
+        self._slider_was_moved = False
+
+
+    def on_slider_release(self, slider, touch):
+        value = slider.value
+        try:
+            self.app.audioDriver.set_pos(float(value))
+        except Exception:
+            pass
+
+    def _setNewAlbom(self, *args):
         self.viewImage.reload()
-        # включаем плавное появление
         Animation(opacity=1, duration=0.5).start(self.viewImage)
     
-    def _setPosTreack(self, instance, value, *args):
-        self.app.audioDriver.muiscDriver.play(start=instance.value)
 
     def stopOrStartEvent(self):
         if self.updateEventProgressbar == None:
@@ -255,6 +279,7 @@ class ControlUI(MDGridLayout):
     def setData(self, data, i):
         self.index = i  # сохраняем выбранный индекс трека
         self.viewImage.source = data['image']
+        self._setNewAlbom()
         self.progressTreack.max = ms_to_time(data['duration'],'sec')
         self.totalTime.text = ms_to_time(data['duration'])
 
@@ -276,7 +301,6 @@ class ControlUI(MDGridLayout):
             self.btnLayout.playPause(change=True)
 
         self.app.reloadCash()
-
 
     def _downloadFileWithInfoOfScreen(self, i):
         self.app.api.downloadFileChoisse(str(i))        

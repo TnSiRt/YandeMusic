@@ -23,7 +23,6 @@ class BtnSoundControlHorizantal(MDGridLayout):
             icon_color=hex_to_rgba(color_schem['playerBtn']),
             theme_icon_color='Custom',
             font_size=35,
-            theme_font_size="Custom",
             on_release=self.prevCallback
         )
         self.leftBtn.add_widget(self.skipPreviousBtn)
@@ -34,7 +33,6 @@ class BtnSoundControlHorizantal(MDGridLayout):
             icon_color=hex_to_rgba(color_schem['playerBtn']),
             theme_icon_color='Custom',
             font_size=35,
-            theme_font_size="Custom",
             on_release = lambda x: self.playPause(change=False)
         )
         self.centerBtn.add_widget(self.pauseUnpauseBtn)
@@ -45,7 +43,6 @@ class BtnSoundControlHorizantal(MDGridLayout):
             icon_color=hex_to_rgba(color_schem['playerBtn']),
             theme_icon_color='Custom',
             font_size=35,
-            theme_font_size="Custom",
             on_release=self.nextCallback
         )
         self.rightBtn.add_widget(self.skipNextBtn)

@@ -10,12 +10,12 @@ from kivymd.app import MDApp
 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.fitimage import FitImage
-from kivymd.uix.textfield import MDTextField, MDTextFieldLeadingIcon, MDTextFieldHintText
+from kivymd.uix.textfield import MDTextField
 
-from kivymd.uix.button import MDButton, MDButtonText
+from kivymd.uix.button import MDFillRoundFlatButton
 
 from kivymd.uix.label import MDLabel
-from kivymd.uix.progressindicator import MDLinearProgressIndicator
+from kivymd.uix.progressbar import MDProgressBar
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.gridlayout import MDGridLayout
@@ -69,11 +69,9 @@ class Login(MDScreen):
 
 
         self.content_box = MDFloatLayout()
-        self.iconLead = MDTextFieldLeadingIcon(icon='cellphone-message') 
-        self.hintText = MDTextFieldHintText(text='Номер куда надо отпарить код')
         self.phoneInput = MDTextField(
-            self.iconLead,
-            self.hintText,
+            icon_left='cellphone-message',
+            hint_text='Номер куда надо отпарить код',
             pos_hint={
                 'center_x':0.5,
                 "center_y":0.5
@@ -81,7 +79,7 @@ class Login(MDScreen):
         )
         self.content_box.add_widget(self.phoneInput)
         
-        self.progress = MDLinearProgressIndicator(
+        self.progress = MDProgressBar(
             value=0,
             max=100,
             pos_hint={"center_x": 0.5, "center_y": 0.5},
@@ -94,9 +92,8 @@ class Login(MDScreen):
 
         self.layoutLoginButton = MDFloatLayout()
 
-        self.text = MDButtonText(text='войти') 
-        self.btn = MDButton(
-            self.text,
+        self.btn = MDFillRoundFlatButton(
+            text='войти',
             style='filled',
             pos_hint={
                 'center_x':0.5,
@@ -183,9 +180,9 @@ class Login(MDScreen):
         Clock.schedule_once(lambda dt: self._after_login_request_start(), 0)
     
     def _after_login_request_start(self):
-        self.text.text = 'Отправить код'
-        self.iconLead.icon = 'invoice-send'
-        self.hintText.text = 'Введите код из сообщения'
+        self.btn.text = 'Отправить код'
+        self.btn.icon_left = 'invoice-send'
+        self.btn.hint_text = 'Введите код из сообщения'
         self.btn.on_release = self.sendCodeToService
 
     def _login_request_end(self,code):
