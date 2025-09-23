@@ -25,6 +25,7 @@ pip install -r requirements.txt
 ## 🎨 Скриншоты
 
 ![Header](https://github.com/TnSiRt/YandeMusic/blob/main/Screen1.png)
+![Header](https://github.com/TnSiRt/YandeMusic/blob/main/Screen2.jpg)
 
 
 ## 📜 Лицензия
